@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RASHXIT TERMINAL</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
+  body {
+    background: #000;
+    min-height:100vh; color:#0f0;
+    display:flex; justify-content:center; align-items:center; padding:20px;
+    position:relative; overflow-x:hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,255,0,0.03) 0px,
+      rgba(0,255,0,0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none; z-index: 1;
+  }
+  body::after {
+    content: "";
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none; z-index: 1;
+  }
+  .player {
+    background: rgba(0,20,0,0.85);
+    border: 2px solid #0f0;
+    border-radius: 4px;
+    padding: 20px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 0 20px rgba(0,255,0,0.4), inset 0 0 20px rgba(0,255,0,0.05);
+    position: relative; z-index: 2;
+  }
+  .player::before {
+    content: "┌─[ RASHXIT TERMINAL v1.0 ]──────┐";
+    position: absolute; top:-12px; left:10px;
+    background:#000; padding: 0 6px; font-size:11px; color:#0f0;
+    letter-spacing:1px;
+  }
+  .cover {
+    width:100%; height:180px; border-radius:4px;
+    display:flex; justify-content:center; align-items:center;
+    background: #000;
+    border: 1px solid #0f0;
+    font-size:60px;
+    color:#0f0;
+    text-shadow: 0 0 10px #0f0;
+    transition: transform .3s;
+  }
+  .cover.spin { animation: rotate 8s linear infinite; }
+  @keyframes rotate { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  h1 { font-size:14px; text-align:center; margin:12px 0 5px; color:#0f0; text-shadow: 0 0 5px #0f0; letter-spacing:1px; min-height:38px; display:flex; align-items:center; justify-content:center; }
+  .artist { text-align:center; color:#0a0; font-size:11px; margin-bottom:12px; letter-spacing:1px; }
+  .artist::before { content: "$ "; color:#0f0; }
+  .progress-wrap { width:100%; height:8px; background:#001a00; border:1px solid #0f0; cursor:pointer; margin-bottom:8px; }
+  .progress { height:100%; width:0%; background:#0f0; box-shadow: 0 0 8px #0f0; }
+  .time { display:flex; justify-content:space-between; font-size:10px; color:#0a0; margin-bottom:12px; }
+  .controls { display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  button {
+    background:#001a00; border:1px solid #0f0; color:#0f0;
+    width:46px; height:46px; font-size:16px; font-family:'Courier New',monospace;
+    cursor:pointer; transition:.2s;
+    text-shadow: 0 0 5px #0f0;
+  }
+  button:hover { background:#0f0; color:#000; box-shadow: 0 0 15px #0f0; }
+  button.main {
+    width:60px; height:60px; font-size:22px;
+    background:#0f0; color:#000;
+    box-shadow: 0 0 20px #0f0;
+  }
+  button.main:hover { background:#0f0; box-shadow: 0 0 30px #0f0; }
+  .extras { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+  .extras button { width:100%; height:38px; font-size:10px; }
+  .vol-wrap { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .vol-wrap span { color:#0f0; text-shadow: 0 0 5px #0f0; }
+  input[type=range] { -webkit-appearance:none; width:100%; height:6px; background:#001a00; border:1px solid #0f0; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:#0f0; cursor:pointer; box-shadow:0 0 10px #0f0; }
+  .search-box { width:100%; padding:8px 12px; background:#000; border:1px solid #0f0; color:#0f0; font-size:12px; font-family:'Courier New',monospace; outline:none; margin-bottom:10px; }
+  .search-box::placeholder { color:#0a0; }
+  .playlist { max-height:180px; overflow-y:auto; border:1px solid #0f0; padding:6px; background:#000; }
+  .playlist::-webkit-scrollbar { width:6px; }
+  .playlist::-webkit-scrollbar-track { background:#001a00; }
+  .playlist::-webkit-scrollbar-thumb { background:#0f0; }
+  .song {
+    padding:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+    font-size:11px; transition:.2s; margin-bottom:3px; color:#0a0;
+    border-left:2px solid transparent;
+  }
+  .song:hover { background:#001a00; color:#0f0; }
+  .song.active { background:#002a00; color:#0f0; border-left:2px solid #0f0; text-shadow:0 0 5px #0f0; }
+  .song .num { color:#0f0; font-size:10px; margin-right:8px; }
+  .file-input { display:none; }
+  .upload-btn, .folder-btn {
+    width:100%; height:40px; font-size:12px; font-family:'Courier New',monospace;
+    margin-bottom:8px; cursor:pointer;
+    display:flex; justify-content:center; align-items:center; gap:6px;
+    border:1px solid #0f0; background:#001a00; color:#0f0; text-shadow:0 0 5px #0f0;
+  }
+  .upload-btn:hover, .folder-btn:hover { background:#0f0; color:#000; box-shadow:0 0 15px #0f0; }
+  .info { font-size:10px; color:#0a0; text-align:center; margin-top:6px; letter-spacing:1px; }
+  .clear-btn { background:#1a0000; color:#f00; width:100%; height:32px; font-size:10px; margin-top:8px; border:1px solid #f00; cursor:pointer; font-family:'Courier New',monospace; }
+  .clear-btn:hover { background:#f00; color:#000; }
+</style>
+</head>
+<body>
+<div class="player">
+  <div class="cover" id="cover">🎵</div>
+  <h1 id="title">Pilih Lagu</h1>
+  <div class="artist" id="artist">RASHXIT Music</div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress" id="progress"></div>
+  </div>
+  <div class="time">
+    <span id="current">0:00</span>
+    <span id="duration">0:00</span>
+  </div>
+
+  <div class="controls">
+    <button onclick="prev()">⏮</button>
+    <button class="main" id="playBtn" onclick="togglePlay()">▶</button>
+    <button onclick="next()">⏭</button>
+  </div>
+
+  <div class="controls">
+    <button onclick="toggleShuffle()" id="shuffleBtn">🔀</button>
+    <button onclick="toggleRepeat()" id="repeatBtn">🔁</button>
+    <button onclick="toggleMute()" id="muteBtn">🔊</button>
+    <button onclick="randomSong()">🎲</button>
+  </div>
+
+  <div class="extras">
+    <button onclick="speedUp()">⏩ 1.5x</button>
+    <button onclick="speedDown()">⏪ 0.5x</button>
+    <button onclick="speedReset()">🔄 Normal</button>
+  </div>
+
+  <div class="vol-wrap">
+    <span>🔉</span>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+    <span>🔊</span>
+  </div>
+
+  <label class="folder-btn" for="folderInput">📂 Scan Folder Musik</label>
+  <input type="file" id="folderInput" class="file-input" accept="audio/*" multiple webkitdirectory directory>
+
+  <label class="upload-btn" for="fileInput">📁 Pilih File MP3</label>
+  <input type="file" id="fileInput" class="file-input" accept="audio/*" multiple>
+
+  <input type="text" class="search-box" id="search" placeholder="🔍 Cari lagu...">
+
+  <div class="playlist" id="playlist"></div>
+  <div class="info" id="info">Belum ada lagu. Tap tombol di atas.</div>
+  <button class="clear-btn" onclick="clearPlaylist()">🗑️ Hapus Playlist Tersimpan</button>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+let songs = [];
+const audio = document.getElementById('audio');
+const cover = document.getElementById('cover');
+const title = document.getElementById('title');
+const artist = document.getElementById('artist');
+const progress = document.getElementById('progress');
+const progressWrap = document.getElementById('progressWrap');
+const current = document.getElementById('current');
+const duration = document.getElementById('duration');
+const playBtn = document.getElementById('playBtn');
+const playlistEl = document.getElementById('playlist');
+const volume = document.getElementById('volume');
+const fileInput = document.getElementById('fileInput');
+const folderInput = document.getElementById('folderInput');
+const searchBox = document.getElementById('search');
+const info = document.getElementById('info');
+
+let index = 0;
+let isShuffle = false;
+let isRepeat = false;
+
+function loadPlaylist() {
+  const saved = localStorage.getItem('rashxit_playlist');
+  const savedIndex = localStorage.getItem('rashxit_index');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        songs = parsed;
+        if (savedIndex) index = parseInt(savedIndex) || 0;
+        info.textContent = `[ OK ] Total: ${songs.length} lagu (tersimpan)`;
+        renderPlaylist();
+        loadSong(index);
+        return true;
+      }
+    } catch(e) {}
+  }
+  return false;
+}
+
+function savePlaylist() {
+  try {
+    localStorage.setItem('rashxit_playlist', JSON.stringify(songs));
+    localStorage.setItem('rashxit_index', index);
+  } catch(e) {}
+}
+
+function loadSong(i) {
+  if (!songs[i]) return;
+  const s = songs[i];
+  audio.src = s.src;
+  typeTitle(s.title);
+  artist.textContent = s.artist;
+  index = i;
+  savePlaylist();
+  renderPlaylist();
+}
+
+function typeTitle(text) {
+  title.textContent = '';
+  let j = 0;
+  const timer = setInterval(() => {
+    title.textContent += text[j] || '';
+    j++;
+    if (j > text.length) clearInterval(timer);
+  }, 30);
+}
+
+function renderPlaylist(filter = '') {
+  playlistEl.innerHTML = '';
+  const filtered = songs.map((s, i) => ({...s, i})).filter(s =>
+    s.title.toLowerCase().includes(filter.toLowerCase())
+  );
+  if (filtered.length === 0) {
+    playlistEl.innerHTML = '<div style="text-align:center;color:#0a0;padding:15px;font-size:11px">// gak ada lagu</div>';
+    return;
+  }
+  filtered.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'song' + (s.i === index ? ' active' : '');
+    div.innerHTML = `<span><span class="num">[${s.i+1}]</span>${s.title}</span><span>▶</span>`;
+    div.onclick = () => { loadSong(s.i); play(); };
+    playlistEl.appendChild(div);
+  });
+}
+
+function play() { audio.play(); playBtn.textContent = '⏸'; cover.classList.add('spin'); }
+function pause() { audio.pause(); playBtn.textContent = '▶'; cover.classList.remove('spin'); }
+function togglePlay() { audio.paused ? play() : pause(); }
+
+function next() {
+  if (songs.length === 0) return;
+  if (isShuffle) index = Math.floor(Math.random() * songs.length);
+  else index = (index + 1) % songs.length;
+  loadSong(index); play();
+}
+
+function prev() {
+  if (songs.length === 0) return;
+  index = (index - 1 + songs.length) % songs.length;
+  loadSong(index); play();
+}
+
+function randomSong() { if (songs.length === 0) return; index = Math.floor(Math.random() * songs.length); loadSong(index); play(); }
+function toggleShuffle() { isShuffle = !isShuffle; document.getElementById('shuffleBtn').style.color = isShuffle ? '#0f0' : '#0a0'; }
+function toggleRepeat() { isRepeat = !isRepeat; document.getElementById('repeatBtn').style.color = isRepeat ? '#0f0' : '#0a0'; }
+function toggleMute() { audio.muted = !audio.muted; document.getElementById('muteBtn').textContent = audio.muted ? '🔇' : '🔊'; }
+function speedUp() { audio.playbackRate = 1.5; }
+function speedDown() { audio.playbackRate = 0.5; }
+function speedReset() { audio.playbackRate = 1; }
+
+audio.addEventListener('timeupdate', () => {
+  const p = (audio.currentTime / audio.duration) * 100 || 0;
+  progress.style.width = p + '%';
+  current.textContent = fmt(audio.currentTime);
+  duration.textContent = fmt(audio.duration || 0);
+});
+
+audio.addEventListener('ended', () => {
+  if (isRepeat) { audio.currentTime = 0; play(); }
+  else next();
+});
+
+progressWrap.onclick = (e) => {
+  const rect = progressWrap.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+};
+
+volume.oninput = () => { audio.volume = volume.value; };
+searchBox.oninput = () => renderPlaylist(searchBox.value);
+
+function addFiles(files) {
+  let added = 0;
+  for (let f of files) {
+    if (!f.type.startsWith('audio/')) continue;
+    const url = URL.createObjectURL(f);
+    songs.push({
+      title: f.name.replace(/\.[^.]+$/, ''),
+      artist: 'Lokal',
+      src: url
+    });
+    added++;
+  }
+  savePlaylist();
+  info.textContent = `[ OK ] Total: ${songs.length} lagu (+${added} baru)`;
+  renderPlaylist(searchBox.value);
+  if (songs.length === added && songs.length > 0) {
+    loadSong(0);
+  }
+}
+
+function clearPlaylist() {
+  if (confirm('Hapus semua playlist tersimpan?')) {
+    songs = [];
+    index = 0;
+    localStorage.removeItem('rashxit_playlist');
+    localStorage.removeItem('rashxit_index');
+    title.textContent = 'Pilih Lagu';
+    artist.textContent = 'RASHXIT Music';
+    info.textContent = 'Belum ada lagu. Tap tombol di atas.';
+    renderPlaylist();
+  }
+}
+
+fileInput.onchange = (e) => addFiles(e.target.files);
+folderInput.onchange = (e) => addFiles(e.target.files);
+
+function fmt(s) {
+  if (isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+const loaded = loadPlaylist();
+if (!loaded) {
+  renderPlaylist();
+}
+</script>
+</body>
+</html>
